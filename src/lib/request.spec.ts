@@ -5,11 +5,34 @@ import * as bot from '..'
 describe('[request]', () => {
   before(() => {
     bot.server.load()
-    bot.server.router!.get('/pass', (ctx) => ctx.body = 'success')
-    bot.server.router!.get('/json', (ctx) => ctx.body = { id: '1' })
-    bot.server.router!.get('/data', (ctx) => ctx.body = { data: ctx.query })
-    bot.server.router!.post('/data', (ctx) => ctx.body = { data: ctx.request.body })
-    bot.server.router!.get('/fail', (ctx) => ctx.throw('failure'))
+    bot.server.router!.get('/pass', (ctx, next) => {
+      ctx.body = 'success'
+      next()
+    })
+    bot.server.router!.post('/pass', (ctx, next) => {
+      ctx.body = 'success'
+      next()
+    })
+    bot.server.router!.get('/json', (ctx, next) => {
+      ctx.body = { id: '1' }
+      next()
+    })
+    bot.server.router!.get('/data', (ctx, next) => {
+      ctx.body = { data: ctx.query }
+      next()
+    })
+    bot.server.router!.post('/data', (ctx, next) => {
+      ctx.body = { data: ctx.request.body }
+      next()
+    })
+    bot.server.router!.post('/empty', (ctx, next) => {
+      ctx.body = ''
+      next()
+    })
+    bot.server.router!.get('/fail', (ctx, next) => {
+      ctx.throw('failure')
+      next()
+    })
     return bot.server.start()
   })
   after(() => bot.server.shutdown())
@@ -56,6 +79,25 @@ describe('[request]', () => {
           body: { userId: '1' }
         })
         expect(result.data).to.include({ userId: '1' })
+      })
+      it('handles POST with string body', async () => {
+        const result = await bot.request.make({
+          method: 'POST',
+          uri: `${bot.server.url()}/pass`,
+          json: true,
+          body: { userId: '1' }
+        })
+        expect(result).to.equal('success')
+        expect(typeof result.data).to.equal('undefined')
+      })
+      it('handles POST request without data', async () => {
+        const result = await bot.request.make({
+          method: 'POST',
+          uri: `${bot.server.url()}/empty`,
+          json: true,
+          body: { userId: '1' }
+        })
+        expect(typeof result).to.equal('undefined')
       })
     })
     describe('.get', () => {
